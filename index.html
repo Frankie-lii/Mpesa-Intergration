@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>M-Pesa Payment</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f5f5f5;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    .container { width: 100%; max-width: 420px; }
+
+    /* Header */
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 1.25rem;
+    }
+    .mpesa-logo {
+      background: #00A651;
+      color: #fff;
+      font-weight: 700;
+      font-size: 13px;
+      padding: 5px 12px;
+      border-radius: 6px;
+      letter-spacing: 0.5px;
+    }
+    .header-sub { font-size: 14px; color: #666; }
+
+    /* Steps */
+    .steps {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 1rem;
+    }
+    .step {
+      flex: 1;
+      text-align: center;
+      padding: 7px 4px;
+      font-size: 12px;
+      border-radius: 8px;
+      border: 1px solid #e0e0e0;
+      background: #f0f0f0;
+      color: #888;
+      transition: all 0.2s;
+    }
+    .step.active {
+      background: #00A651;
+      color: #fff;
+      border-color: #00A651;
+      font-weight: 600;
+    }
+    .step.done {
+      background: #E8F5E9;
+      color: #2E7D32;
+      border-color: #4CAF50;
+    }
+
+    /* Card */
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      border: 1px solid #e8e8e8;
+      padding: 1.5rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    .card-title { font-size: 16px; font-weight: 600; color: #111; margin-bottom: 4px; }
+    .card-sub { font-size: 13px; color: #888; margin-bottom: 1.25rem; }
+
+    /* Fields */
+    .field { margin-bottom: 1rem; }
+    .field label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: #555;
+      margin-bottom: 6px;
+    }
+    .input-wrap {
+      display: flex;
+      border: 1.5px solid #ddd;
+      border-radius: 8px;
+      overflow: hidden;
+      transition: border-color 0.15s;
+    }
+    .input-wrap:focus-within { border-color: #00A651; box-shadow: 0 0 0 3px rgba(0,166,81,0.1); }
+    .input-prefix {
+      padding: 0 12px;
+      font-size: 13px;
+      color: #888;
+      background: #f8f8f8;
+      border-right: 1.5px solid #ddd;
+      display: flex;
+      align-items: center;
+      white-space: nowrap;
+    }
+    .input-wrap input {
+      flex: 1;
+      padding: 10px 12px;
+      font-size: 14px;
+      border: none;
+      outline: none;
+      background: transparent;
+      color: #111;
+    }
+    .field > input {
+      width: 100%;
+      padding: 10px 12px;
+      font-size: 14px;
+      border: 1.5px solid #ddd;
+      border-radius: 8px;
+      outline: none;
+      color: #111;
+      transition: border-color 0.15s;
+    }
+    .field > input:focus { border-color: #00A651; box-shadow: 0 0 0 3px rgba(0,166,81,0.1); }
+
+    hr { border: none; border-top: 1px solid #f0f0f0; margin: 1.25rem 0; }
+
+    /* Button */
+    .pay-btn {
+      width: 100%;
+      padding: 13px;
+      background: #00A651;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .pay-btn:hover:not(:disabled) { background: #009347; }
+    .pay-btn:active:not(:disabled) { transform: scale(0.98); }
+    .pay-btn:disabled { background: #ccc; cursor: not-allowed; }
+
+    /* Status */
+    .status {
+      margin-top: 1rem;
+      padding: 14px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      display: none;
+    }
+    .status.pending { background: #FFF8E1; border: 1px solid #FFE082; color: #6D4C00; }
+    .status.success { background: #E8F5E9; border: 1px solid #A5D6A7; color: #1B5E20; }
+    .status.error   { background: #FFEBEE; border: 1px solid #FFCDD2; color: #B71C1C; }
+    .status.show    { display: block; }
+    .status-title   { font-weight: 600; margin-bottom: 3px; }
+    .status-desc    { font-size: 13px; opacity: 0.9; }
+
+    /* Receipt */
+    .receipt {
+      margin-top: 1rem;
+      background: #f9f9f9;
+      border-radius: 8px;
+      padding: 14px;
+      display: none;
+    }
+    .receipt.show { display: block; }
+    .receipt-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: #999;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+    }
+    .receipt-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 5px 0;
+      font-size: 13px;
+      border-bottom: 1px solid #eee;
+    }
+    .receipt-row:last-child { border-bottom: none; }
+    .receipt-key { color: #888; }
+    .receipt-val { font-weight: 500; color: #111; }
+    .receipt-code { color: #00A651; font-family: monospace; font-size: 13px; }
+
+    /* Spinner */
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,0.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .note { font-size: 12px; color: #aaa; text-align: center; margin-top: 1rem; }
+
+    /* Sandbox badge */
+    .sandbox-badge {
+      display: inline-block;
+      background: #FFF3E0;
+      color: #E65100;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 4px;
+      margin-left: 8px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <div class="header">
+    <span class="mpesa-logo">M-PESA</span>
+    <span class="header-sub">STK Push Integration <span class="sandbox-badge">SANDBOX</span></span>
+  </div>
+
+  <div class="steps">
+    <div class="step active" id="step1">1. Details</div>
+    <div class="step" id="step2">2. Awaiting PIN</div>
+    <div class="step" id="step3">3. Confirmed</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Pay via M-Pesa</div>
+    <div class="card-sub">Customer will receive a PIN prompt on their phone</div>
+
+    <div class="field">
+      <label>Phone number</label>
+      <div class="input-wrap">
+        <span class="input-prefix">+254</span>
+        <input type="tel" id="phone" placeholder="712 345 678" maxlength="9" />
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Amount (KES)</label>
+      <div class="input-wrap">
+        <span class="input-prefix">KES</span>
+        <input type="number" id="amount" placeholder="500" min="1" />
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Reference</label>
+      <input type="text" id="reference" placeholder="e.g. Order #1042" maxlength="12" />
+    </div>
+
+    <hr />
+
+    <button class="pay-btn" id="payBtn" onclick="initiate()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12" y2="18.01"/></svg>
+      Send payment request
+    </button>
+
+    <div class="status" id="status">
+      <div class="status-title" id="statusTitle"></div>
+      <div class="status-desc" id="statusDesc"></div>
+    </div>
+
+    <div class="receipt" id="receipt">
+      <div class="receipt-title">Transaction receipt</div>
+      <div class="receipt-row"><span class="receipt-key">M-Pesa code</span><span class="receipt-val receipt-code" id="r-code">—</span></div>
+      <div class="receipt-row"><span class="receipt-key">Phone</span><span class="receipt-val" id="r-phone">—</span></div>
+      <div class="receipt-row"><span class="receipt-key">Amount</span><span class="receipt-val" id="r-amount">—</span></div>
+      <div class="receipt-row"><span class="receipt-key">Reference</span><span class="receipt-val" id="r-ref">—</span></div>
+    </div>
+  </div>
+
+  <p class="note">Connected to Python FastAPI backend · Safaricom Sandbox</p>
+
+</div>
+
+<script>
+  const API = window.location.origin; // same origin as the FastAPI server
+  let pollInterval = null;
+
+  function setStep(n) {
+    ['step1','step2','step3'].forEach((id, i) => {
+      const el = document.getElementById(id);
+      el.className = 'step' + (i + 1 < n ? ' done' : i + 1 === n ? ' active' : '');
+    });
+  }
+
+  function setStatus(type, title, desc) {
+    const box = document.getElementById('status');
+    box.className = 'status show ' + type;
+    document.getElementById('statusTitle').textContent = title;
+    document.getElementById('statusDesc').textContent = desc;
+  }
+
+  function clearStatus() {
+    document.getElementById('status').className = 'status';
+    document.getElementById('receipt').className = 'receipt';
+  }
+
+  function setBtn(loading, text) {
+    const btn = document.getElementById('payBtn');
+    btn.disabled = loading;
+    btn.innerHTML = loading
+      ? `<span class="spinner"></span>${text}`
+      : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12" y2="18.01"/></svg>${text}`;
+  }
+
+  async function initiate() {
+    clearStatus();
+    if (pollInterval) clearInterval(pollInterval);
+
+    const phone = document.getElementById('phone').value.trim();
+    const amount = parseInt(document.getElementById('amount').value);
+    const reference = document.getElementById('reference').value.trim() || 'Payment';
+
+    if (!/^\d{9}$/.test(phone)) {
+      setStatus('error', 'Invalid phone number', 'Enter a 9-digit Safaricom number, e.g. 712345678');
+      return;
+    }
+    if (!amount || amount < 1) {
+      setStatus('error', 'Invalid amount', 'Enter a valid amount of at least KES 1');
+      return;
+    }
+
+    setBtn(true, 'Sending request…');
+    setStep(1);
+
+    try {
+      const res = await fetch(`${API}/mpesa/stkpush`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, amount, reference })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.detail || 'Request failed');
+      }
+
+      setStep(2);
+      setBtn(false, 'Waiting for PIN…');
+      document.getElementById('payBtn').disabled = true;
+      setStatus('pending', 'Check your phone 📱', `An M-Pesa prompt has been sent to +254 ${phone}. Enter your PIN to complete the payment of KES ${amount.toLocaleString()}.`);
+
+      // Poll for result every 3 seconds
+      pollInterval = setInterval(() => poll(data.checkout_request_id, phone, amount, reference), 3000);
+
+    } catch (err) {
+      setBtn(false, 'Send payment request');
+      setStatus('error', 'Request failed', err.message);
+    }
+  }
+
+  async function poll(checkoutId, phone, amount, reference) {
+    try {
+      const res = await fetch(`${API}/mpesa/status/${checkoutId}`);
+      const data = await res.json();
+
+      if (data.status === 'success') {
+        clearInterval(pollInterval);
+        setStep(3);
+        setBtn(false, 'New payment');
+        document.getElementById('payBtn').disabled = false;
+        document.getElementById('payBtn').onclick = reset;
+
+        setStatus('success', '✅ Payment confirmed!', `KES ${(data.amount || amount).toLocaleString()} received successfully.`);
+
+        const receipt = document.getElementById('receipt');
+        receipt.className = 'receipt show';
+        document.getElementById('r-code').textContent   = data.code || '—';
+        document.getElementById('r-phone').textContent  = `+${data.phone || '254' + phone}`;
+        document.getElementById('r-amount').textContent = `KES ${(data.amount || amount).toLocaleString()}`;
+        document.getElementById('r-ref').textContent    = reference;
+
+      } else if (data.status === 'failed') {
+        clearInterval(pollInterval);
+        setBtn(false, 'Try again');
+        document.getElementById('payBtn').disabled = false;
+        document.getElementById('payBtn').onclick = initiate;
+        setStatus('error', 'Payment failed', data.reason || 'The payment was cancelled or failed.');
+        setStep(1);
+      }
+      // if still 'pending', keep polling
+    } catch (e) {
+      console.error('Poll error:', e);
+    }
+  }
+
+  function reset() {
+    if (pollInterval) clearInterval(pollInterval);
+    document.getElementById('phone').value = '';
+    document.getElementById('amount').value = '';
+    document.getElementById('reference').value = '';
+    clearStatus();
+    setStep(1);
+    setBtn(false, 'Send payment request');
+    document.getElementById('payBtn').onclick = initiate;
+  }
+</script>
+</body>
+</html>
